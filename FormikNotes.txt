@@ -1,0 +1,348 @@
+Important links:
+https://medium.com/@rossbulat/formik-for-react-introduction-to-form-management-done-right-971889b40f9f
+https://softchris.github.io/pages/formik-partI.html#forms-in-general-and-form-libraries
+https://reactresources.com/topics/formik
+https://www.youtube.com/watch?v=bttOjT0jfzs&list=PLG02JlJZbKbsrFy-sKyz0PJBkWCajj1i9
+https://medium.com/@ginomessmer/build-react-forms-and-validation-like-a-boss-with-formik-3d1f0c0fe52e
+https://keyholesoftware.com/2017/10/23/the-joy-of-forms-with-react-and-formik/
+https://github.com/jaredpalmer/formik/issues/342
+
+Formik:
+
+In general what are the things that we need to take care of form while building ?
+Validation,
+Error Tracking and displaying ( Tracking stuff like, if validation failed, how exactly it failed. Meaning, if its
+ password it can fail in 3 ways: Password field empty, less than min length, not a diverse password. Tracking also includes the 
+ Error message to throw at this validation. Displaying is while submitting or to specific events like on blur setting up the 
+ validation errors.)
+And finally collecting all the data to submit and do a final validation before submitting.
+
+In React, all the above steps are verbose.
+Since every render is a snapshot of how things should like, every character typed in is a new state in React.
+Although computation is not complex even it operates in that manner, it definitely makes form handling a verbose code.
+
+Formik attempts to simplify all of that stuff.
+
+Without formik,
+
+We need to write handleChange method to update the state of react, to render every character that is typed.
+Also to validate the entered input so far.
+We need to write a handle submit that gets all the values from the state and validates all that stuff that is entered if not 
+validated earlier and finally disable the fomr after submit is clicked so no input gets entered in the mean time.
+And enable the form in either case of a successfull or unsuccessfull submission.
+
+This is a lot to build a working form.
+At minimum, we need to do the following in react for form handling.
+
+Setup state for form values, form errors and form validity.
+Handling user inputs and updating state for form values, form validity and form errors.
+Creating validation functions.
+Handling submissions.
+
+Enter Formik,
+It was meant to standardize the input components and the flow of form submission. 
+Formik helps you write the three most annoying parts of building a form.
+
+Getting values in and out of form state.
+validation and error messages.
+Handling form submission.
+
+1. Getting values in and out of form state:
+Formik will setup state internally for storing user inputs through its initialValues prop, so you don't need to initialize 
+state from constructor anymore.
+In order to get values in and out of formik internal state, you can use the Field component, to replace the regular HTML input,
+component. This component will do the magic of keeping formik state and input values in sync, so you don't have to pass value and
+onChange props into the Field component unlike using a regular html element.
+
+With formik, unlike in plain react you need not assign handleChange handler to every input field to update the state in Component.
+It's all taken care of.
+
+Components from Formik library: <Formik />, <Form />, <Field />, and <ErrorMessage />. 
+In order to unlock Formik’s power, you can wrap your form inside the <Formik /> component:
+
+<Formik>
+  <Form>
+    {/* the rest of the code here */}
+  </Form>
+</Formik>
+
+<Formik
+  initialValues={{ email: "", password: "" }}
+  onSubmit={({ setSubmitting }) => {
+    alert("Form is validated! Submitting the form...");
+    setSubmitting(false);
+  }}
+>
+  {() => (
+    <Form>
+      <div className="form-group">
+        <label htmlFor="email">Email</label>
+        <Field
+          type="email"
+          name="email"
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="password">Password</label>
+        <Field
+          type="password"
+          name="password"
+          className="form-control"
+        />
+      </div>
+    </Form>
+  )}
+</Formik>
+
+2. Validation and Error messages:
+Validation in formik is executed automatically during specific events. In validation context, all common events like userInput, 
+onFocus change, and onSubmit are covered. We don't have to worry about them. All you need to do is pass a function into Formik's 
+validate prop. And that takes care of all this stuff.
+
+// Formik validation code. Take values from Formik
+validate={values => {
+  let errors = {};
+  if (values.email === "") {
+    errors.email = "Email is required";
+  } else if (!emailTest.test(values.email)) {
+    errors.email = "Invalid email address format";
+  }
+  if (values.password === "") {
+    errors.password = "Password is required";
+  } else if (values.password.length < 3) {
+    errors.password = "Password must be 3 characters at minimum";
+  }
+  return errors;
+}}
+
+// Vanilla React validation code. Take values given by handleChange
+handleValidation = target => {
+  const { name, value } = target;
+  const fieldValidationErrors = this.state.formErrors;
+  const validity = this.state.formValidity;
+  const isEmail = name === "email";
+  const isPassword = name === "password";
+  const emailTest = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+  validity[name] = value.length > 0;
+  fieldValidationErrors[name] = validity[name]
+    ? ""
+    : `${name} is required and cannot be empty`;
+  if (validity[name]) {
+    if (isEmail) {
+      validity[name] = emailTest.test(value);
+      fieldValidationErrors[name] = validity[name]
+        ? ""
+        : `${name} should be a valid email address`;
+    }
+    if (isPassword) {
+      validity[name] = value.length >= 3;
+      fieldValidationErrors[name] = validity[name]
+        ? ""
+        : `${name} should be 3 characters minimum`;
+    }
+  }
+  this.setState({
+    formErrors: fieldValidationErrors,
+    formValidity: validity
+  });
+};
+
+With validation in place, we need to output error messages, Formik's error message component will automatically display error
+message for the Field component with the given name. You can adjust what HTML tag will be displayed through component prop.
+
+// Formik error message output
+<Field
+  type="email"
+  name="email"
+  className={`form-control ${
+    touched.email && errors.email ? "is-invalid" : ""
+  }`}
+/>
+<ErrorMessage
+  component="div"
+  name="email"
+  className="invalid-feedback"
+/>
+
+// Vanilla React error message output
+<input
+  type="email"
+  name="email"
+  className={`form-control ${
+    formErrors.email ? "is-invalid" : ""
+  }`}
+  placeholder="Enter email"
+  onChange={this.handleChange}
+  value={formValues.email}
+/>
+<div className="invalid-feedback">{formErrors.email}</div>
+
+The code for error message is actually about the same, but there’s a lot less code in Formik’s validation than in vanilla React. 
+Way to go, Formik!
+
+Although you can already feel the benefit of using Formik in validation process, you can make it even easier by using an object 
+schema validator.
+
+An object schema validator is simply a library that allows you to define the blueprint of a JavaScript object
+ and ensure that the object values match that blueprint through the validation process. This is particularly useful in 
+ validating form data since it’s actually an object kept inside Formik’s values prop.
+
+Now one such library is Yup, and Formik’s author loves Yup so much that he included a special prop that connects
+ Yup with Formik called validationSchema. This prop will automatically transform Yup’s validation errors into a pretty 
+ object whose keys match values and touched.
+
+Here is an example of Formik using Yup as its validation schema. 
+Notice how the validate prop is removed from the <Formik /> component:
+
+import React from "react";
+import ReactDOM from "react-dom";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+
+import "bootstrap/dist/css/bootstrap.css";
+
+const LoginSchema = Yup.object().shape({
+  email: Yup.string()
+    .email("Invalid email address format")
+    .required("Email is required"),
+  password: Yup.string()
+    .min(3, "Password must be 3 characters at minimum")
+    .required("Password is required")
+});
+
+class LoginForm extends React.Component {
+  render() {
+    return (
+      <div className="container">
+        <div className="row mb-5">
+          <div className="col-lg-12 text-center">
+            <h1 className="mt-5">Login Form</h1>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-lg-12">
+            <Formik
+              initialValues={{ email: "", password: "" }}
+              validationSchema={LoginSchema}
+              onSubmit={({ setSubmitting }) => {
+                alert("Form is validated! Submitting the form...");
+                setSubmitting(false);
+              }}
+            >
+              {({ touched, errors, isSubmitting }) => (
+                <Form>
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <Field
+                      type="email"
+                      name="email"
+                      placeholder="Enter email"
+                      className={`form-control ${
+                        touched.email && errors.email ? "is-invalid" : ""
+                      }`}
+                    />
+                    <ErrorMessage
+                      component="div"
+                      name="email"
+                      className="invalid-feedback"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <Field
+                      type="password"
+                      name="password"
+                      placeholder="Enter password"
+                      className={`form-control ${
+                        touched.password && errors.password ? "is-invalid" : ""
+                      }`}
+                    />
+                    <ErrorMessage
+                      component="div"
+                      name="password"
+                      className="invalid-feedback"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-block"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Please wait..." : "Submit"}
+                  </button>
+                </Form>
+              )}
+            </Formik>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+3. Form Submission process.
+Formik's form component will automatically run your validation method and cancel the submission process if there are any errors.
+While you have to include the onsubmit function to a generic form element. Form wrapper will run the onSubmit prop function 
+you passed into Formik component. 
+
+// Formik's submit code. Won't be executed if there are any errors.
+onSubmit={({ setSubmitting }) => {
+  alert("Form is validated!");
+  setSubmitting(false);
+}}
+
+// Vanilla React submit code. Check on validity state then run validation manually.
+handleSubmit = event => {
+  event.preventDefault();
+  this.setState({ isSubmitting: true });
+  const { formValues, formValidity } = this.state;
+  if (Object.values(formValidity).every(Boolean)) {
+    alert("Form is validated!");
+    this.setState({ isSubmitting: false });
+  } else {
+    for (let key in formValues) {
+      let target = {
+        name: key,
+        value: formValues[key]
+      };
+      this.handleValidation(target);
+    }
+    this.setState({ isSubmitting: false });
+  }
+};
+
+Formik while submitting lets you totally forget about validation. It takes care about all of it. That's neat!
+
+Conclusion:
+
+Building forms is one of those things that React isn’t good at. Luckily, React has a community of developers that help 
+each other and make the process of writing code easier.
+
+Formik is definitely one of those open source libraries that’s a must-have if you are writing many forms in your React application. 
+It really speeds up your development process and reduces boilerplate
+ code by abstracting away parts of your form through components like <Field /> and <Form />.
+
+While a vanilla React form requires you to specify your own state values and methods, 
+you can simply pass props to the <Formik /> component to do the same things: handle user inputs, validate inputs,
+ and form submission.
+
+These are very good reasons to jump onto the Formik train, however the online documentation can appear somewhat disjointed for 
+newcomers, with verbose documentation and code-pens that adopt different implementation styles.
+
+The reason for this is that Formik gives us multiple ways to build forms: a more traditional component based workflow for 
+building forms, as well as a more abstract method using a “higher order component” with the withFormik class wrapper,
+ for prop and handler management.
+
+
+
+
+
+
+
+
+
+
+
